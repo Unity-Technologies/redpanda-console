@@ -513,6 +513,7 @@ export const useUpdateAclMutation = () => {
 
 export const useGetAclsByPrincipal = <T = AclDetail>(
   principal: string,
+  host?: string,
   transformFn?: (aclList: ListACLsResponse) => T,
 ) => {
   return useQuery(
@@ -520,6 +521,7 @@ export const useGetAclsByPrincipal = <T = AclDetail>(
     {
       filter: {
         principal,
+        host,
       },
     } as ListACLsRequest,
     {
