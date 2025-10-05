@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from 'components/redpanda-ui
 import { Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGetAclsByPrincipal } from '../../../../react-query/api/acl';
-import { MatchingUsersCard } from '../../roles/MatchingUsersCard';
 import {
   formatLabel,
   getIdFromRule,
@@ -58,17 +57,10 @@ interface ACLDetailsProps {
   };
   rules: Rule[];
   onUpdateACL: () => void;
-  showMatchingUsers?: boolean;
   isSimpleView?: boolean; // this prop show SharedConfig, this is used for emmbedded this component on legacy user page
 }
 
-export function ACLDetails({
-  sharedConfig,
-  rules,
-  onUpdateACL,
-  showMatchingUsers = false,
-  isSimpleView = false,
-}: ACLDetailsProps) {
+export function ACLDetails({ sharedConfig, rules, onUpdateACL, isSimpleView = false }: ACLDetailsProps) {
   const navigate = useNavigate();
 
   const getGoTo = (sc: SharedConfig) => {
@@ -116,9 +108,9 @@ export function ACLDetails({
       {/* Main Content */}
       <main>
         <div className=" mx-auto">
-          <div className={`grid grid-cols-1 ${showMatchingUsers ? 'lg:grid-cols-3' : ''} gap-8`}>
+          <div className="grid grid-cols-1 gap-8">
             {/* Left Column - Configuration Details */}
-            <div className={`${showMatchingUsers ? 'lg:col-span-2' : ''} space-y-6`}>
+            <div className="space-y-6">
               {/* Shared Configuration */}
               <Card size="full" className={`${isSimpleView ? 'hidden' : ''}`}>
                 <CardHeader className="pb-4">
@@ -239,11 +231,6 @@ export function ACLDetails({
                 </CardContent>
               </Card>
             </div>
-
-            {/* Right Column - Matching Users */}
-            {showMatchingUsers && (
-              <MatchingUsersCard principalType={data.principalType} principal={sharedConfig.principal} />
-            )}
           </div>
         </div>
       </main>
