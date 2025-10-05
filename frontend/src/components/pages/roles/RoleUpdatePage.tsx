@@ -13,6 +13,7 @@ import { useToast } from '@redpanda-data/ui';
 import {
   getOperationsForResourceType,
   handleResponses,
+  handleUrlWithHost,
   ModeAllowAll,
   ModeDenyAll,
   OperationTypeAllow,
@@ -22,8 +23,9 @@ import {
   type SharedConfig,
 } from 'components/pages/acls/new-acl/ACL.model';
 import CreateACL from 'components/pages/acls/new-acl/CreateACL';
+import { HostSelector } from 'components/pages/acls/new-acl/HostSelector';
 import { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGetAclsByPrincipal, useUpdateAclMutation } from '../../../react-query/api/acl';
 import { uiState } from '../../../state/uiState';
 import PageContent from '../../misc/PageContent';
@@ -32,6 +34,8 @@ const RoleUpdatePage = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const { roleName = '' } = useParams<{ roleName: string }>();
+  const [searchParams] = useSearchParams();
+  const host = searchParams.get('host') ?? undefined;
 
   const { applyUpdates } = useUpdateAclMutation();
 
@@ -45,17 +49,17 @@ const RoleUpdatePage = () => {
   }, [roleName]);
 
   // Fetch existing ACL data for the role
-  const { data, isLoading } = useGetAclsByPrincipal(`RedpandaRole:${roleName}`);
+  const { data, isLoading } = useGetAclsByPrincipal(`RedpandaRole:${roleName}`, host);
 
   const updateRoleAclMutation =
     (actualRules: Rule[], sharedConfig: SharedConfig) => async (_: string, _2: string, rules: Rule[]) => {
       const applyResult = await applyUpdates(actualRules, sharedConfig, rules);
       handleResponses(toast, applyResult.errors, applyResult.created);
 
-      navigate(`/security/roles/${roleName}/details`);
+      navigate(handleUrlWithHost(`/security/roles/${roleName}/details`, host));
     };
 
-  if (isLoading || !data) {
+  if (isLoading || !data || data.length === 0) {
     return (
       <PageContent>
         <div className="flex items-center justify-center h-96">
@@ -65,8 +69,30 @@ const RoleUpdatePage = () => {
     );
   }
 
+  // If multiple hosts exist and no host is selected, show host selector
+  if (data.length > 1 && !host) {
+    return (
+      <PageContent>
+        <HostSelector principalName={roleName} hosts={data} baseUrl={`/security/roles/${roleName}/update`} />
+      </PageContent>
+    );
+  }
+
+  // Get the ACL for the selected host (or the only one available)
+  const acl = host ? data.find((d) => d.sharedConfig.host === host) : data[0];
+
+  if (!acl) {
+    return (
+      <PageContent>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-gray-500">No ACL data found for host: {host}</div>
+        </div>
+      </PageContent>
+    );
+  }
+
   // Ensure all operations are present for each rule
-  const rulesWithAllOperations = data.rules.map((rule) => {
+  const rulesWithAllOperations = acl.rules.map((rule) => {
     const allOperations = getOperationsForResourceType(rule.resourceType);
     let mergedOperations = { ...allOperations };
 
@@ -93,10 +119,10 @@ const RoleUpdatePage = () => {
   return (
     <PageContent>
       <CreateACL
-        onSubmit={updateRoleAclMutation(data.rules, data.sharedConfig)}
-        onCancel={() => navigate(`/security/roles/${roleName}/details`)}
+        onSubmit={updateRoleAclMutation(acl.rules, acl.sharedConfig)}
+        onCancel={() => navigate(handleUrlWithHost(`/security/roles/${roleName}/details`, host))}
         rules={rulesWithAllOperations}
-        sharedConfig={data.sharedConfig}
+        sharedConfig={acl.sharedConfig}
         edit={true}
         principalType={PrincipalTypeRedpandaRole}
       />
