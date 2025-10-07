@@ -1,5 +1,7 @@
 module github.com/redpanda-data/console/backend
 
+replace github.com/twmb/tlscfg => github.com/Unity-Technologies/tlscfg v1.2.1-unity-fix
+
 go 1.24.3
 
 toolchain go1.24.4
